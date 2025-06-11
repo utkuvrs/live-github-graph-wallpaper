@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contribution Canvas</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-color: #0d1117;
+            --text-color: #c9d1d9;
+            --text-color-light: #8b949e;
+            --tooltip-bg: #161b22;
+            --level0-color: #161b22;
+            --level1-color: #0e4429;
+            --level2-color: #006d32;
+            --level3-color: #26a641;
+            --level4-color: #39d353;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        @keyframes square-in {
+            from { opacity: 0; transform: scale(0.3); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .contribution-square {
+            animation: square-in 0.3s ease-out forwards;
+            opacity: 0;
+            transition: transform 0.15s ease-out, background-color 0.3s ease;
+        }
+
+        .contribution-square:hover {
+            /* Hover effect increased */
+            transform: scale(1.6);
+            position: relative;
+            z-index: 10;
+        }
+        
+        #tooltip {
+            background-color: var(--tooltip-bg);
+            color: var(--text-color);
+            transform: translate(-50%, -150%);
+        }
+
+        .text-light {
+            color: var(--text-color-light);
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center h-screen overflow-hidden">
+
+    <div id="container" class="text-center p-4">
+        <p id="label" class="mb-2 text-lg text-gray-400 font-medium tracking-wider"></p>
+        <div id="graph-wrapper" class="inline-block opacity-0 transition-opacity duration-500 ease-in-out">
+            <!-- Spacing and height adjusted for the new size -->
+            <div id="months-container" class="grid grid-flow-col auto-cols-max gap-1.5 pl-12 mb-1 text-sm text-light h-5"></div>
+            <div class="flex gap-4">
+                <!-- Spacing and height adjusted for the new size -->
+                <div id="days-container" class="grid grid-rows-7 gap-1.5 text-sm text-light pt-1">
+                    <div class="h-6"></div>
+                    <div class="h-6 leading-6">Mon</div>
+                    <div class="h-6"></div>
+                    <div class="h-6 leading-6">Wed</div>
+                    <div class="h-6"></div>
+                    <div class="h-6 leading-6">Fri</div>
+                    <div class="h-6"></div>
+                </div>
+                <!-- Spacing adjusted for the new size -->
+                <div id="contribution-graph" class="grid grid-flow-col gap-1.5"></div>
+            </div>
+        </div>
+        
+        <div id="feedback" class="mt-4 text-lg text-gray-400"></div>
+        <div id="tooltip" class="absolute z-20 p-2 text-xs font-semibold rounded-md shadow-lg opacity-0 pointer-events-none transition-opacity duration-200"></div>
+    </div>
+
+    <script>
+        const root = document.documentElement;
+        const graphWrapper = document.getElementById('graph-wrapper');
+        const graphContainer = document.getElementById('contribution-graph');
+        const monthsContainer = document.getElementById('months-container');
+        const feedbackDiv = document.getElementById('feedback');
+        const label = document.getElementById('label');
+        const tooltip = document.getElementById('tooltip');
+        
+        let currentThemeName = 'GitHub Dark';
+
+        const themes = {
+            'GitHub Dark': {'--bg-color':'#0d1117','--text-color':'#c9d1d9','--text-color-light':'#8b949e','--tooltip-bg':'#161b22','--level0-color':'#161b22','--level1-color':'#0e4429','--level2-color':'#006d32','--level3-color':'#26a641','--level4-color':'#39d353'},
+            'Dracula': {'--bg-color':'#282a36','--text-color':'#f8f8f2','--text-color-light':'#bd93f9','--tooltip-bg':'#44475a','--level0-color':'#44475a','--level1-color':'#6272a4','--level2-color':'#bd93f9','--level3-color':'#ff79c6','--level4-color':'#50fa7b'},
+            'Nord': {'--bg-color':'#2E3440','--text-color':'#D8DEE9','--text-color-light':'#A3BE8C','--tooltip-bg':'#3B4252','--level0-color':'#3B4252','--level1-color':'#4C566A','--level2-color':'#5E81AC','--level3-color':'#81A1C1','--level4-color':'#88C0D0'},
+            'Solarized Light': {'--bg-color':'#fdf6e3','--text-color':'#657b83','--text-color-light':'#93a1a1','--tooltip-bg':'#eee8d5','--level0-color':'#eee8d5','--level1-color':'#93a1a1','--level2-color':'#859900','--level3-color':'#2aa198','--level4-color':'#268bd2'},
+            'Monokai': {'--bg-color':'#272822','--text-color':'#f8f8f2','--text-color-light':'#a6e22e','--tooltip-bg':'#3e3d32','--level0-color':'#3e3d32','--level1-color':'#75715e','--level2-color':'#a6e22e','--level3-color':'#f92672','--level4-color':'#66d9ef'},
+            'One Dark Pro': {'--bg-color':'#282c34','--text-color':'#abb2bf','--text-color-light':'#61afef','--tooltip-bg':'#3f4451','--level0-color':'#3f4451','--level1-color':'#4b5263','--level2-color':'#61afef','--level3-color':'#c678dd','--level4-color':'#98c379'},
+            'Tokyo Night': {'--bg-color':'#1a1b26','--text-color':'#a9b1d6','--text-color-light':'#7aa2f7','--tooltip-bg':'#292e42','--level0-color':'#292e42','--level1-color':'#1f2335','--level2-color':'#bb9af7','--level3-color':'#7dcfff','--level4-color':'#9ece6a'},
+            'Ayu Dark': {'--bg-color':'#0A0E14','--text-color':'#B3B1AD','--text-color-light':'#FFB454','--tooltip-bg':'#1f2430','--level0-color':'#1f2430','--level1-color':'#394254','--level2-color':'#ffb454','--level3-color':'#59c2ff','--level4-color':'#aad94c'},
+            'Cobalt2': {'--bg-color':'#193549','--text-color':'#e1efff','--text-color-light':'#ffc600','--tooltip-bg':'#132b3c','--level0-color':'#132b3c','--level1-color':'#184867','--level2-color':'#ffc600','--level3-color':'#ff9d00','--level4-color':'#fb9300'},
+            'Synthwave \'84': {'--bg-color':'#2b213a','--text-color':'#f9f7f3','--text-color-light':'#ff8b39','--tooltip-bg':'#3c2f50','--level0-color':'#3c2f50','--level1-color':'#4f3a65','--level2-color':'#ff8b39','--level3-color':'#f4eee4','--level4-color':'#ffd866'},
+            'Palenight': {'--bg-color':'#292D3E','--text-color':'#A6ACCD','--text-color-light':'#82AAFF','--tooltip-bg':'#3A4055','--level0-color':'#3A4055','--level1-color':'#4E5875','--level2-color':'#82AAFF','--level3-color':'#C792EA','--level4-color':'#F78C6C'},
+            'Solarized Dark': {'--bg-color':'#002b36','--text-color':'#839496','--text-color-light':'#2aa198','--tooltip-bg':'#073642','--level0-color':'#073642','--level1-color':'#586e75','--level2-color':'#859900','--level3-color':'#2aa198','--level4-color':'#268bd2'},
+            'Oceanic Next': {'--bg-color':'#1B2B34','--text-color':'#CDD3DE','--text-color-light':'#6699CC','--tooltip-bg':'#2A3C45','--level0-color':'#2A3C45','--level1-color':'#34495E','--level2-color':'#6699CC','--level3-color':'#C594C5','--level4-color':'#99C794'},
+            'Material Darker': {'--bg-color':'#212121','--text-color':'#EEFFFF','--text-color-light':'#82AAFF','--tooltip-bg':'#303030','--level0-color':'#303030','--level1-color':'#353535','--level2-color':'#82AAFF','--level3-color':'#C792EA','--level4-color':'#C3E88D'},
+            'Gruvbox Dark': {'--bg-color':'#282828','--text-color':'#ebdbb2','--text-color-light':'#fabd2f','--tooltip-bg':'#3c3836','--level0-color':'#3c3836','--level1-color':'#504945','--level2-color':'#fabd2f','--level3-color':'#b8bb26','--level4-color':'#83a598'},
+            'Shades of Purple': {'--bg-color':'#2D2B55','--text-color':'#9EFEFF','--text-color-light':'#FAD000','--tooltip-bg':'#222144','--level0-color':'#222144','--level1-color':'#4D4B7A','--level2-color':'#FAD000','--level3-color':'#FF628C','--level4-color':'#A5FF90'},
+            'Night Owl': {'--bg-color':'#011627','--text-color':'#d6deeb','--text-color-light':'#82aaff','--tooltip-bg':'#0b253a','--level0-color':'#0b253a','--level1-color':'#122d42','--level2-color':'#82aaff','--level3-color':'#c792ea','--level4-color':'#addb67'},
+            'Andromeda': {'--bg-color':'#23262E','--text-color':'#D1D5DA','--text-color-light':'#00E8C6','--tooltip-bg':'#2D323B','--level0-color':'#2D323B','--level1-color':'#3E444D','--level2-color':'#00E8C6','--level3-color':'#C792EA','--level4-color':'#FF5370'},
+            'Atom One Dark': {'--bg-color':'#282c34','--text-color':'#abb2bf','--text-color-light':'#61afef','--tooltip-bg':'#3f4451','--level0-color':'#3f4451','--level1-color':'#4b5263','--level2-color':'#61afef','--level3-color':'#c678dd','--level4-color':'#e06c75'},
+            'City Lights': {'--bg-color':'#1d252c','--text-color':'#b1c0c9','--text-color-light':'#5ec4ff','--tooltip-bg':'#263038','--level0-color':'#263038','--level1-color':'#303c45','--level2-color':'#5ec4ff','--level3-color':'#f39c12','--level4-color':'#1abc9c'},
+            'Panda': {'--bg-color':'#292A2B','--text-color':'#E6E6E6','--text-color-light':'#FFB86C','--tooltip-bg':'#212223','--level0-color':'#212223','--level1-color':'#38393A','--level2-color':'#FFB86C','--level3-color':'#FF79C6','--level4-color':'#50FA7B'},
+            'Everforest Dark': {'--bg-color':'#2f383e','--text-color':'#d3c6aa','--text-color-light':'#a7c080','--tooltip-bg':'#3a464c','--level0-color':'#3a464c','--level1-color':'#4f5b57','--level2-color':'#a7c080','--level3-color':'#d699b6','--level4-color':'#7fbbb3'},
+            'Catppuccin Mocha': {'--bg-color':'#1E1E2E','--text-color':'#CDD6F4','--text-color-light':'#89B4FA','--tooltip-bg':'#313244','--level0-color':'#313244','--level1-color':'#45475A','--level2-color':'#89B4FA','--level3-color':'#F5C2E7','--level4-color':'#A6E3A1'},
+            'Rosé Pine': {'--bg-color':'#191724','--text-color':'#e0def4','--text-color-light':'#ebbcba','--tooltip-bg':'#26233a','--level0-color':'#26233a','--level1-color':'#3e3a59','--level2-color':'#ebbcba','--level3-color':'#c4a7e7','--level4-color':'#9ccfd8'},
+            'Kanagawa': {'--bg-color':'#1F1F28','--text-color':'#DCD7BA','--text-color-light':'#7E9CD8','--tooltip-bg':'#2A2A37','--level0-color':'#2A2A37','--level1-color':'#363646','--level2-color':'#7E9CD8','--level3-color':'#957FB8','--level4-color':'#98BB6C'},
+            'Darcula': {'--bg-color':'#2B2B2B','--text-color':'#A9B7C6','--text-color-light':'#FFC66D','--tooltip-bg':'#3C3F41','--level0-color':'#3C3F41','--level1-color':'#4E5254','--level2-color':'#FFC66D','--level3-color':'#CC7832','--level4-color':'#6A8759'},
+        };
+
+        function applyTheme(themeName) {
+            currentThemeName = themeName;
+            const theme = themes[themeName] || themes['GitHub Dark'];
+            for (const [key, value] of Object.entries(theme)) {
+                root.style.setProperty(key, value);
+            }
+        }
+        
+        // --- HELPER FUNCTIONS FOR DYNAMIC COLOR ---
+        function hexToRgb(hex) {
+            let result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return result ? { r: parseInt(result[1], 16), g: parseInt(result[2], 16), b: parseInt(result[3], 16) } : null;
+        }
+
+        function interpolateColor(color1, color2, factor) {
+            const rgb1 = hexToRgb(color1);
+            const rgb2 = hexToRgb(color2);
+            if (!rgb1 || !rgb2) return 'rgb(0,0,0)';
+            const r = Math.round(rgb1.r + factor * (rgb2.r - rgb1.r));
+            const g = Math.round(rgb1.g + factor * (rgb2.g - rgb1.g));
+            const b = Math.round(rgb1.b + factor * (rgb2.b - rgb1.b));
+            return `rgb(${r}, ${g}, ${b})`;
+        }
+
+
+        async function fetchAndBuildGraph(username) {
+            feedbackDiv.textContent = `Loading graph for ${username}...`;
+            graphContainer.innerHTML = '';
+            monthsContainer.innerHTML = '';
+            label.textContent = '';
+            graphWrapper.classList.remove('opacity-100');
+
+            try {
+                const apiUrl = `https://github-contributions-api.deno.dev/${username}.json`;
+                const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(apiUrl)}`;
+                
+                const response = await fetch(proxyUrl);
+                if (!response.ok) throw new Error(`Network response error (status: ${response.status})`);
+                
+                const data = await response.json();
+                
+                if (!data || !data.contributions || !Array.isArray(data.contributions) || data.contributions.length === 0) {
+                    throw new Error('Invalid or empty data format received from API.');
+                }
+                
+                // --- CALCULATION LOGIC ---
+                const allDays = data.contributions.flat();
+                const totalContributions = allDays.reduce((sum, day) => sum + (day ? (day.contributionCount || day.count || 0) : 0), 0);
+                const allCounts = allDays.map(d => d ? (d.contributionCount || d.count || 0) : 0);
+                const maxContribution = Math.max(...allCounts, 1); // Avoids division by zero if there are no contributions
+
+                const weeks = data.contributions.slice(-26);
+
+                if (allCounts.every(count => count === 0)) {
+                    feedbackDiv.textContent = `No contributions found for "${username}".`;
+                    label.textContent = `${username} has 0 total contributions.`;
+                    return;
+                }
+
+                monthsContainer.innerHTML = '';
+                const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+                let lastMonth = -1;
+
+                weeks.forEach((week, weekIndex) => {
+                    const monthCell = document.createElement('div');
+                    const firstDayOfWeek = week.find(day => day);
+                    if (firstDayOfWeek) {
+                        const date = new Date(firstDayOfWeek.date);
+                        const month = date.getMonth();
+                        if (weekIndex === 0 || (month !== lastMonth && date.getDate() < 8)) {
+                            const lastLabelIndex = Array.from(monthsContainer.children).findLastIndex(el => el.textContent.trim() !== '');
+                            if (lastLabelIndex === -1 || (weekIndex - lastLabelIndex) > 3) {
+                                monthCell.textContent = monthNames[month];
+                                lastMonth = month;
+                            }
+                        }
+                    }
+                    monthsContainer.appendChild(monthCell);
+                });
+                
+                const theme = themes[currentThemeName];
+                const colorEmpty = theme['--level0-color'];
+                const colorStart = theme['--level1-color'];
+                const colorEnd = theme['--level4-color'];
+
+                graphContainer.innerHTML = '';
+                weeks.forEach((week, weekIndex) => {
+                    const weekContainer = document.createElement('div');
+                    // Inner grid spacing
+                    weekContainer.className = 'grid grid-rows-7 gap-1.5';
+                    
+                    week.forEach((day, dayIndex) => {
+                        const daySquare = document.createElement('div');
+                        daySquare.className = `contribution-square w-6 h-6 rounded`; 
+                        
+                        if (day && day.date) {
+                            const contributionCount = day.contributionCount || day.count || 0;
+
+                            // --- DYNAMIC COLOR LOGIC APPLIED ---
+                            if (contributionCount > 0) {
+                                // Logarithmic scale for better visual distribution of colors
+                                const intensity = Math.log1p(contributionCount) / Math.log1p(maxContribution);
+                                daySquare.style.backgroundColor = interpolateColor(colorStart, colorEnd, intensity);
+                            } else {
+                                daySquare.style.backgroundColor = colorEmpty;
+                            }
+                            
+                            daySquare.style.animationDelay = `${(weekIndex * 7 + dayIndex) * 10}ms`;
+                            daySquare.dataset.count = contributionCount;
+                            daySquare.dataset.date = day.date;
+                            daySquare.addEventListener('mouseover', handleMouseOver);
+                            daySquare.addEventListener('mouseout', handleMouseOut);
+                        } else {
+                            daySquare.style.backgroundColor = colorEmpty;
+                        }
+                        weekContainer.appendChild(daySquare);
+                    });
+                    graphContainer.appendChild(weekContainer);
+                });
+                
+                feedbackDiv.textContent = '';
+                label.textContent = `${totalContributions.toLocaleString()} contributions in the last year for ${username}`;
+                graphWrapper.classList.add('opacity-100');
+
+            } catch (error) {
+                let errorMessage = 'Failed to fetch contribution data.';
+                if (error.message.includes("404") || error.message.includes("Not Found")) {
+                    errorMessage = `User "${username}" not found.`;
+                } else if (error instanceof TypeError) {
+                    errorMessage = "Network error or invalid user. Please check username and connection.";
+                } else {
+                    errorMessage = `An unexpected error occurred: ${error.message}`;
+                }
+                feedbackDiv.textContent = errorMessage;
+                console.error("Error details:", error);
+            }
+        }
+        
+        function handleMouseOver(event) {
+            const square = event.target;
+            const count = square.dataset.count;
+            const date = new Date(square.dataset.date).toLocaleDateString('en-US', { timeZone: 'UTC', year: 'numeric', month: 'long', day: 'numeric' });
+            tooltip.innerHTML = `<strong>${count}</strong> contribution${count == '1' ? '' : 's'} on ${date}`;
+            
+            const rect = square.getBoundingClientRect();
+            tooltip.style.left = `${rect.left + rect.width / 2}px`;
+            tooltip.style.top = `${rect.top}px`;
+            tooltip.style.opacity = '1';
+        }
+
+        function handleMouseOut() {
+            tooltip.style.opacity = '0';
+        }
+
+        window.wallpaperPropertyListener = {
+            applyUserProperties: function(properties) {
+                const theme = properties.theme ? properties.theme.value : 'GitHub Dark';
+                applyTheme(theme);
+                
+                if (properties.githubuser && properties.githubuser.value.trim() !== '') {
+                    fetchAndBuildGraph(properties.githubuser.value.trim());
+                } else {
+                    graphContainer.innerHTML = '';
+                    monthsContainer.innerHTML = '';
+                    graphWrapper.classList.remove('opacity-100');
+                    label.textContent = '';
+                    feedbackDiv.innerHTML = `Please set a GitHub username in Wallpaper Engine. Find me on <a href="https://github.com/SingleK1ller" target="_blank" class="text-green-400 hover:underline">https://github.com/SingleK1ller</a>!`;
+                }
+            },
+        };
+        /*
+        // *DEBUG ONLY PANEL* -> Consider edit this part if you want to test using the browser
+        window.onload = function() {
+            // This block is for browser-only debugging purposes.
+            // It simulates the Wallpaper Engine environment.
+            if (typeof window.wallpaperPropertyListener.applyUserProperties !== 'function') {
+                 fetchAndBuildGraph('SingleK1ller');
+                 applyTheme('Dracula');
+            } else {
+                window.wallpaperPropertyListener.applyUserProperties({
+                    githubuser: { value: 'SingleK1ller' },
+                    theme: { value: 'Dracula' }
+                });
+            }
+        };
+        */
+    </script>
+</body>
+</html>
