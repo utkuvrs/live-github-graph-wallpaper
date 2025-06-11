@@ -15,8 +15,7 @@ This project provides a dynamic wallpaper for Wallpaper Engine that displays you
    - Ensure you have Wallpaper Engine installed. If not, you can download it from [Steam](https://store.steampowered.com/app/431960/Wallpaper_Engine/).
 
 2. **Import the Wallpaper**:
-   - Download the project files or clone this repository.
-   - Open Wallpaper Engine and import the downloaded folder.
+   - Search Github_Contribution_Viewer in the Workshop.
 
 3. **Set Your GitHub Username**:
    - In Wallpaper Engine, navigate to **Properties** for this wallpaper.
