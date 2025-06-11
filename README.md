@@ -1,4 +1,7 @@
 # GitHub Contributions Wallpaper for Wallpaper Engine
+<img src="live-commit.png" 
+     width="300" 
+     height="300" />
 
 This project provides a dynamic wallpaper for Wallpaper Engine that displays your GitHub contributions over the past year. It allows you to choose between multiple themes and shows the number of contributions for each day.
 
