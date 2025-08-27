@@ -74,17 +74,17 @@
         <p id="label" class="mb-2 text-lg text-gray-400 font-medium tracking-wider"></p>
         <div id="graph-wrapper" class="inline-block opacity-0 transition-opacity duration-500 ease-in-out">
             <!-- Spacing and height adjusted for the new size -->
-            <div id="months-container" class="grid grid-flow-col auto-cols-max gap-6 pl-12 mb-1 text-sm text-light h-5">
-            </div>
+            <div id="months-container"
+                class="grid grid-flow-col auto-cols-max gap-1.5 pl-12 mb-1 text-sm text-light h-5"></div>
             <div class="flex gap-4">
                 <!-- Spacing and height adjusted for the new size -->
                 <div id="days-container" class="grid grid-rows-7 gap-1.5 text-sm text-light pt-1">
                     <div class="h-6"></div>
-                    <div class="h-6 leading-4">Mon</div>
+                    <div class="h-6 leading-6">Mon</div>
                     <div class="h-6"></div>
-                    <div class="h-6 leading-4">Wed</div>
+                    <div class="h-6 leading-6">Wed</div>
                     <div class="h-6"></div>
-                    <div class="h-6 leading-4">Fri</div>
+                    <div class="h-6 leading-6">Fri</div>
                     <div class="h-6"></div>
                 </div>
                 <!-- Spacing adjusted for the new size -->
@@ -310,7 +310,7 @@
         };
 
         // *DEBUG ONLY PANEL* -> Consider edit this part if you want to test using the browser
-        window.onload = function () {
+        /* window.onload = function () {
             // This block is for browser-only debugging purposes.
             // It simulates the Wallpaper Engine environment.
             if (typeof window.wallpaperPropertyListener.applyUserProperties !== 'function') {
@@ -322,7 +322,7 @@
                     theme: { value: 'Dracula' }
                 });
             }
-        };
+        }; */
 
     </script>
 </body>
